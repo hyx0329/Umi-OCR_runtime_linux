@@ -1,18 +1,20 @@
 #!/bin/bash
 
-# 确保工作目录为脚本所在目录
-cd $(dirname ${BASH_SOURCE[0]})
-# 记录当前目录
-current_dir=$(pwd)
-# 获取脚本的绝对路径并写入环境变量
-export UMI_APP_PATH=$(realpath ${BASH_SOURCE[0]})
+# 确保初始工作目录为脚本本体所在绝对目录以加载环境，解析软链接
+script_absolute_path=$(realpath -e "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$script_absolute_path")
+
+pushd "${script_dir}" > /dev/null
+
+# 将脚本的绝对路径并写入环境变量
+export UMI_APP_PATH="${script_dir}"
 
 # 检查 Python 环境
 #   嵌入式环境
 if [ -f "UmiOCR-data/.embeddable/activate.sh" ]; then
-    cd UmiOCR-data/.embeddable
+    pushd UmiOCR-data/.embeddable > /dev/null
     source activate.sh
-    cd $current_dir
+    popd > /dev/null
     echo "Use the Python embeddable environment."
 #   虚拟环境
 elif [ -f "UmiOCR-data/.venv/bin/activate" ]; then
@@ -22,6 +24,9 @@ elif [ -f "UmiOCR-data/.venv/bin/activate" ]; then
 else
     echo "Use the default Python environment."
 fi
+
+# 虚拟环境加载完成，返回启动时位置
+popd > /dev/null
 
 echo "pwd: $(pwd)"
 
@@ -47,4 +52,4 @@ else
 fi
 
 # 通过指定环境中的Python解释器，启动主程序，传入命令行指令
-python3 UmiOCR-data/main_linux.py "$@"
+exec python3 "${script_dir}"/UmiOCR-data/main_linux.py "$@"
